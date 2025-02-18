@@ -3,25 +3,29 @@ from fastapi.middleware.cors import CORSMiddleware
 from BertSentimentClassifier import BERTSentimentClassifier
 from transformers import AutoTokenizer
 import torch
+from huggingface_hub import snapshot_download
 
 N_ClASSES = 2
 MAX_LEN = 200
 DATASET_PATH = 'data/Caracteristicas_Empleo_Falso.xlsx'
 PRE_TRAINED_MODEL = 'bert-base-cased'
-MODEL_PATH = 'models/trabajos_fraudulentos_bert.pth'
-TOKERNIZER_PATH = 'trabajos_fraudulentos_bert_tokenizer'
+#MODEL_PATH = 'models/trabajos_fraudulentos_bert.pth'
+#TOKERNIZER_PATH = 'trabajos_fraudulentos_bert_tokenizer'
 #device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu') #en caso de tener GPU, usar esto para habilitarlo
 device = 'cpu'
 
 # cargar el model
 model = BERTSentimentClassifier(N_ClASSES, PRE_TRAINED_MODEL)
 
-model.load_state_dict(torch.load(MODEL_PATH, map_location=device))
+ruta_modelo = snapshot_download(repo_id="HuascarGutierrez/BERT_BuscaSeguro", local_dir="modelo")
+
+
+model.load_state_dict(torch.load('modelo/trabajos_fraudulentos_bert.pth', map_location=device))
 model.to(device)
 print("modelo cargado de forma exitosa")
 
 #cargar el tokenizer
-tokenizer = AutoTokenizer.from_pretrained(TOKERNIZER_PATH)
+tokenizer = AutoTokenizer.from_pretrained('modelo/trabajos_fraudulentos_bert_tokenizer')
 print("tokenizer cargado de forma exitosa")
 
 #creacion de la API
@@ -66,3 +70,9 @@ async def predecir(request: SentimentRequest):
     prediction_prob = request.prob
     prediccion = predecir_trabajo_fraudulento(test_text, obtener_prob=prediction_prob) 
     return {'Sentimiento': prediccion}
+
+import uvicorn
+import os
+if __name__ == "__main__":
+    port = int(os.getenv("PORT", 8000))  # Usa el puerto asignado por Render
+    uvicorn.run(app, host="0.0.0.0", port=port)
