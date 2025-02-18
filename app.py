@@ -74,5 +74,5 @@ async def predecir(request: SentimentRequest):
 import uvicorn
 import os
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", 8000))  # Usa el puerto asignado por Render
+    port = int(os.getenv("PORT", 5000))  # Usa el puerto asignado por Render
     uvicorn.run(app, host="0.0.0.0", port=port)
