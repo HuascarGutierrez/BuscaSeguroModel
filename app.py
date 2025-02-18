@@ -4,6 +4,7 @@ from BertSentimentClassifier import BERTSentimentClassifier
 from transformers import AutoTokenizer
 import torch
 from huggingface_hub import snapshot_download
+import os
 
 N_ClASSES = 2
 MAX_LEN = 200
@@ -17,15 +18,22 @@ device = 'cpu'
 # cargar el model
 model = BERTSentimentClassifier(N_ClASSES, PRE_TRAINED_MODEL)
 
-ruta_modelo = snapshot_download(repo_id="HuascarGutierrez/BERT_BuscaSeguro", local_dir="modelo")
+ruta_modelo = "modelo"
+
+if not os.path.exists(ruta_modelo):
+    print("Descargando modelo desde Hugging Face...")
+    snapshot_download(repo_id="HuascarGutierrez/BERT_BuscaSeguro", local_dir="modelo")
+else:
+    print("Modelo ya descargado, omitiendo descarga.")
 
 
-model.load_state_dict(torch.load('modelo/trabajos_fraudulentos_bert.pth', map_location=device))
-model.to(device)
+model.load_state_dict(torch.load(ruta_modelo+'/trabajos_fraudulentos_bert.pth', map_location=device))
+model.to(device, dtype=torch.float16)
+model.eval()  # Esto desactiva el cálculo de gradientes y reduce el uso de memoria
 print("modelo cargado de forma exitosa")
 
 #cargar el tokenizer
-tokenizer = AutoTokenizer.from_pretrained('modelo/trabajos_fraudulentos_bert_tokenizer')
+tokenizer = AutoTokenizer.from_pretrained(ruta_modelo+'/trabajos_fraudulentos_bert_tokenizer')
 print("tokenizer cargado de forma exitosa")
 
 #creacion de la API
@@ -72,7 +80,6 @@ async def predecir(request: SentimentRequest):
     return {'Sentimiento': prediccion}
 
 import uvicorn
-import os
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", 5000))  # Usa el puerto asignado por Render
+    port = int(os.getenv("PORT", 10000))  # Usa el puerto asignado por Render
     uvicorn.run(app, host="0.0.0.0", port=port)
